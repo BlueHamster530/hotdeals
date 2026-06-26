@@ -38,6 +38,7 @@ services:
     # 외부 비노출 — nginx가 /api 로 프록시
 
   worker:
+    build: .
     image: hotdeals-backend:local
     restart: unless-stopped
     env_file: .env.prod
@@ -51,6 +52,7 @@ services:
         condition: service_healthy
 
   bot:
+    build: .
     image: hotdeals-backend:local
     restart: unless-stopped
     env_file: .env.prod
