@@ -61,8 +61,18 @@ def parse_price(title: str) -> int | None:
     return max(candidates) if candidates else None
 
 
+# 브랜드명(콜라 등)이 들어가도 실제론 잡화/굿즈인 경우. 음료·식품 오분류 방지용.
+_NON_CONSUMABLE = (
+    "수납", "스토리지", "폴딩", "캠핑", "텀블러", "보틀", "굿즈", "키링", "인형",
+    "우산", "슬리퍼", "담요", "매트", "쿠션", "파우치", "케이스", "에코백", "피규어",
+)
+
+
 def guess_category(title: str) -> str | None:
     low = title.lower()
+    # 잡화 단어가 있으면 브랜드 기반 음료·식품 매칭을 막고 생활용품으로
+    if any(k in low for k in _NON_CONSUMABLE):
+        return "생활용품"
     for category, keywords in _CATEGORY_KEYWORDS:
         if any(kw in low for kw in keywords):
             return category
