@@ -1,0 +1,13 @@
+.env
+.env.prod
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# nginx/certbot 발급 인증서·챌린지 (서버에서 생성)
+nginx/certbot/
+
+# Claude Code 로컬 설정
+.claude/

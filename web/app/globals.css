@@ -1,0 +1,116 @@
+:root {
+  --bg-page: #faf9f7;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --text: #1a1a1a;
+  --text-2: #5f5e5a;
+  --text-3: #999791;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-2: rgba(0, 0, 0, 0.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #1a1a18;
+    --surface: #242422;
+    --surface-2: #2c2c2a;
+    --text: #f1efe8;
+    --text-2: #b4b2a9;
+    --text-3: #888780;
+    --border: rgba(255, 255, 255, 0.14);
+    --border-2: rgba(255, 255, 255, 0.07);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  line-height: 1.6;
+}
+
+a { color: inherit; }
+
+.container { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.site-header h1 { font-size: 20px; font-weight: 600; margin: 0; }
+.site-header nav a {
+  font-size: 14px; color: var(--text-2); text-decoration: none;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.site-header nav a:hover { background: var(--surface-2); }
+
+/* 검색 + 필터 */
+.controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.search-input {
+  width: 100%; height: 42px; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); font-size: 15px;
+}
+.search-input:focus { outline: none; border-color: var(--text-3); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+}
+.chip:hover { background: var(--surface-2); }
+.chip.active { background: var(--text); color: var(--bg-page); border-color: var(--text); }
+
+/* 딜 카드 */
+.deal-list { display: flex; flex-direction: column; gap: 12px; }
+.deal-card {
+  display: flex; gap: 14px; padding: 16px;
+  background: var(--surface); border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+}
+.thumb {
+  flex-shrink: 0; width: 88px; height: 88px; border-radius: var(--radius-sm);
+  object-fit: cover; background: var(--surface-2);
+}
+.thumb-empty {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); font-size: 11px; color: var(--text-3);
+}
+.deal-body { flex: 1; min-width: 0; }
+
+.deal-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.deal-source { font-size: 12px; color: var(--text-2); }
+
+.verdict {
+  font-size: 12px; padding: 3px 10px; border-radius: var(--radius-sm); white-space: nowrap;
+}
+
+.deal-title {
+  display: inline-block; font-size: 15px; font-weight: 500; color: var(--text);
+  text-decoration: none; word-break: break-word;
+}
+.deal-title:hover { text-decoration: underline; }
+.deal-title .ext { font-size: 12px; color: var(--text-3); }
+
+.deal-price-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 12px; }
+.deal-price { font-size: 20px; font-weight: 600; }
+.deal-discount { font-size: 13px; }
+
+/* 가격 게이지 */
+.gauge-track { display: flex; height: 8px; border-radius: 4px; overflow: hidden; }
+.gauge-band { flex: 1; }
+.gauge-band.g { background: #EAF3DE; }
+.gauge-band.a { background: #FAEEDA; }
+.gauge-band.r { background: #FCEBEB; }
+.gauge-marker-row { position: relative; height: 12px; }
+.gauge-marker { position: absolute; top: -10px; width: 2px; height: 12px; transform: translateX(-1px); }
+.gauge-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); }
+.gauge-empty { font-size: 12px; color: var(--text-3); padding: 4px 0; }
+
+.state { text-align: center; color: var(--text-2); padding: 48px 0; }

@@ -1,0 +1,22 @@
+# 개발용 PostgreSQL. 운영(Lightsail)에서는 같은 파일에 api/web/worker 서비스를 추가해 확장.
+# 보안: DB 포트는 로컬에서만 노출. 운영에서는 ports 매핑을 제거하고 내부 네트워크로만 접근.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hotdeals}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-prod}
+      POSTGRES_DB: ${POSTGRES_DB:-hotdeals}
+    ports:
+      - "127.0.0.1:5432:5432"   # 외부에 노출하지 않음 (loopback 바인딩)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hotdeals}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

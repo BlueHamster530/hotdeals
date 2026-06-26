@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+web/
+.git/
+.env
+.env.prod
+*.md
+nginx/
