@@ -19,6 +19,7 @@ from app.analysis import service
 from app.analysis.price_stats import meets_rating
 from app.config import get_settings
 from app.db import SessionLocal
+from app.ingest.normalize import CATEGORIES
 
 logger = logging.getLogger("ai")
 
@@ -27,9 +28,30 @@ _MAX_ITERATIONS = 6  # 함수호출 왕복 상한 (무한 루프 방지)
 SYSTEM_PROMPT = """너는 '핫딜 모아보기' 서비스의 AI 어시스턴트야.
 국내 커뮤니티(뽐뿌·쿨앤조이·루리웹 등) 핫딜 데이터를 도구로 조회해 사용자 질문에 답한다.
 
+카테고리 체계 (search_deals의 category 파라미터에 반드시 이 값만 사용):
+- 제로음료: 제로 콜라, 사이다, 탄산음료
+- 커피/차: 원두, 캡슐, 티백
+- 통신: 알뜰폰, 유심, 요금제
+- 전자기기: SSD, 모니터, 노트북, 스마트폰, 이어폰
+- 가전: 냉장고, 세탁기, 에어컨, 청소기
+- 뷰티: 화장품, 스킨케어, 향수
+- 패션: 의류, 신발, 가방
+- 건강: 비타민, 영양제, 유산균
+- 유아/완구: 기저귀, 분유, 장난감
+- 반려동물: 사료, 펫용품
+- 생활용품: 휴지, 세제, 주방용품
+- 식품: 라면, 과자, 쌀, 고기, 과일, 채소
+- 도서/콘텐츠: 도서, 게임, 스팀, 닌텐도, 기프티콘게임
+- 상품권/쿠폰: 상품권, 기프트카드, 쿠폰
+- 기타
+
 규칙:
 - 현재 딜·가격·할인 정보가 필요하면 반드시 search_deals 또는 get_item_analysis 도구를 먼저 호출해
   실제 데이터로 답한다. 절대 추측하지 않는다.
+- 사용자가 카테고리에 매핑되는 주제를 물으면 위 목록에서 정확한 카테고리명을 사용해 검색한다.
+  예: "게임 할인" → category="도서/콘텐츠", "강아지 사료" → category="반려동물"
+- 키워드가 명확하면 q 파라미터로 좁힐 수 있다.
+  예: "스팀 게임 할인" → category="도서/콘텐츠", q="스팀"
 - "이거 진짜 싸?" 류의 질문엔 rating(great=역대급/good=좋은가격/normal=평범/poor=비싼편)과
   평균 대비 할인율(discount_vs_avg_pct), 역대 최저가(min_price)를 근거로 설명한다.
 - 답변은 한국어로 간결하게. 가격은 원 단위로, 가능하면 원문 링크(url)도 함께 제시한다.
@@ -47,7 +69,7 @@ def _build_tools() -> list[types.Tool]:
             type="OBJECT",
             properties={
                 "q": types.Schema(type="STRING", description="제목 검색 키워드 (예: 콜라, SSD)"),
-                "category": types.Schema(type="STRING", description="카테고리 (예: 제로음료, 전자기기)"),
+                "category": types.Schema(type="STRING", description="카테고리 필터", enum=CATEGORIES),
                 "min_rating": types.Schema(
                     type="STRING",
                     enum=["good", "great"],
