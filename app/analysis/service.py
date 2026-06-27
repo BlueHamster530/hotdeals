@@ -66,7 +66,6 @@ async def list_deals(
                 "price": deal.price,
                 "category": deal.category,
                 "source": source_name,
-                "thumbnail_url": deal.thumbnail_url,
                 "posted_at": deal.posted_at,      # 커뮤니티 게시 시각(없을 수 있음)
                 "fetched_at": deal.fetched_at,    # 우리가 수집한 시각(항상 있음, 폴백용)
                 "item_id": deal.item_id,

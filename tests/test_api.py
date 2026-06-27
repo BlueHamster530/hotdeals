@@ -52,15 +52,6 @@ async def test_alarm_register_bad_invite(api):
     assert r.status_code == 400
 
 
-async def test_img_proxy_ssrf_guard(api):
-    # allowlist에 없는 호스트/내부 메타데이터/비-http는 거부 (SSRF·남용 방지)
-    client, _, _ = api
-    assert (await client.get("/api/img", params={"u": "https://evil.com/a.jpg"})).status_code == 400
-    assert (await client.get("/api/img", params={"u": "http://169.254.169.254/latest/meta-data/"})).status_code == 400
-    assert (await client.get("/api/img", params={"u": "ftp://clien.net/a.jpg"})).status_code == 400
-    assert (await client.get("/api/img")).status_code == 422  # u 누락
-
-
 async def _connect_user(Sm, label="u"):
     """초대→연결까지 거쳐 auth_token을 만든 헬퍼."""
     async with Sm() as s:

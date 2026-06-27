@@ -10,12 +10,7 @@
 
 from __future__ import annotations
 
-import hashlib
-import os
-from urllib.parse import urlparse
-
-import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -26,7 +21,6 @@ from app.analysis import service
 from app.config import get_settings
 from app.db import get_session
 from app.models import Keyword, User
-from app.sources.base import BROWSER_HEADERS
 
 app = FastAPI(title="hotdeals API", version="0.1")
 
@@ -71,81 +65,6 @@ async def get_item(
 @app.get("/api/categories")
 async def get_categories(session: AsyncSession = Depends(get_session)) -> dict:
     return {"categories": await service.list_categories(session)}
-
-
-# --- 이미지 프록시 (핫링크 차단 우회) ---
-# 일부 커뮤니티 CDN(루리웹 등)은 Referer를 검사해 외부 페이지에서의 이미지 로드를 막는다.
-# 서버가 이미지 출처를 Referer로 넣어 대신 받아 서빙한다. SSRF/남용 방지로 호스트 allowlist.
-
-_IMG_HOSTS = ("ruliweb.com", "clien.net", "coolenjoy.net", "ppomppu.co.kr", "damoang.net", "arca.live")
-
-
-def _allowed_img_host(host: str) -> bool:
-    host = (host or "").lower()
-    return any(host == h or host.endswith("." + h) for h in _IMG_HOSTS)
-
-
-_CACHE_DIR = get_settings().img_cache_dir
-_CACHE_HEADERS = {"Cache-Control": "public, max-age=604800"}  # 7일
-
-
-def _cache_read(u: str) -> tuple[bytes, str] | None:
-    """디스크 캐시에서 (bytes, content-type) 읽기. 없거나 오류면 None."""
-    key = hashlib.sha256(u.encode()).hexdigest()
-    p = os.path.join(_CACHE_DIR, key)
-    try:
-        if os.path.exists(p):
-            ct = "image/jpeg"
-            if os.path.exists(p + ".ct"):
-                with open(p + ".ct") as f:
-                    ct = f.read().strip() or ct
-            with open(p, "rb") as f:
-                return f.read(), ct
-    except Exception:
-        pass
-    return None
-
-
-def _cache_write(u: str, data: bytes, ct: str) -> None:
-    key = hashlib.sha256(u.encode()).hexdigest()
-    try:
-        os.makedirs(_CACHE_DIR, exist_ok=True)
-        p = os.path.join(_CACHE_DIR, key)
-        with open(p, "wb") as f:
-            f.write(data)
-        with open(p + ".ct", "w") as f:
-            f.write(ct)
-    except Exception:
-        pass  # 캐시 불가(권한/디스크)면 프록시만 동작
-
-
-@app.get("/api/img")
-async def img_proxy(u: str = Query(..., description="원본 이미지 URL")) -> Response:
-    p = urlparse(u)
-    if p.scheme not in ("http", "https") or not _allowed_img_host(p.hostname or ""):
-        raise HTTPException(status_code=400, detail="허용되지 않은 이미지 URL")
-
-    # 1) 디스크 캐시 우선 — 한 번 받은 이미지는 우리 서버에서 서빙(원본 CDN 재요청 X)
-    cached = _cache_read(u)
-    if cached is not None:
-        data, ct = cached
-        return Response(content=data, media_type=ct, headers={**_CACHE_HEADERS, "X-Cache": "HIT"})
-
-    # 2) 캐시 미스 → 원본에서 받아 캐시에 저장 후 서빙
-    referer = f"{p.scheme}://{p.netloc}/"
-    headers = {"User-Agent": BROWSER_HEADERS["User-Agent"], "Referer": referer}
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            r = await client.get(u, headers=headers)
-    except Exception:
-        raise HTTPException(status_code=502, detail="이미지 가져오기 실패")
-
-    ct = r.headers.get("content-type", "")
-    if r.status_code != 200 or not ct.startswith("image"):
-        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없음")
-
-    _cache_write(u, r.content, ct)
-    return Response(content=r.content, media_type=ct, headers={**_CACHE_HEADERS, "X-Cache": "MISS"})
 
 
 # --- 알림: 초대제 + 텔레그램 연결 + 토큰 인증 (요구사항 3·10) ---

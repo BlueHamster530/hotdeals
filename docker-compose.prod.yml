@@ -30,8 +30,6 @@ services:
     env_file: .env.prod
     environment:
       POSTGRES_HOST: db
-    volumes:
-      - imgcache:/cache       # 이미지 디스크 캐시(우리 서버에서 서빙)
     depends_on:
       db:
         condition: service_healthy
@@ -89,4 +87,3 @@ services:
 
 volumes:
   pgdata:
-  imgcache:

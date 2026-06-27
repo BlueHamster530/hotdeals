@@ -66,7 +66,6 @@ async def _store_deal(session: AsyncSession, source_id: int, raw: RawDeal) -> in
             url=raw.url,
             price=raw.price,
             category=raw.category,
-            thumbnail_url=raw.thumbnail_url,
             posted_at=raw.posted_at,
         )
         .on_conflict_do_nothing(index_elements=["source_id", "source_post_id"])
@@ -74,17 +73,6 @@ async def _store_deal(session: AsyncSession, source_id: int, raw: RawDeal) -> in
     )
     res = (await session.execute(ins)).first()
     if res is None:
-        # 이미 수집된 게시글 — 다만 썸네일이 나중에 생겼으면(og:image 보강 등) 채워준다
-        if raw.thumbnail_url:
-            await session.execute(
-                Deal.__table__.update()
-                .where(
-                    Deal.source_id == source_id,
-                    Deal.source_post_id == raw.source_post_id,
-                    Deal.thumbnail_url.is_(None),
-                )
-                .values(thumbnail_url=raw.thumbnail_url)
-            )
         return None
 
     deal_id = res[0]

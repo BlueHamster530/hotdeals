@@ -1,4 +1,4 @@
-"""아카라이브 핫딜 채널 스크래퍼 (Cloudflare 우회)."""
+"""퀘이사존 지름/할인정보 스크래퍼 (Cloudflare 우회)."""
 
 from __future__ import annotations
 
@@ -11,21 +11,20 @@ from app.ingest.normalize import guess_category, parse_price
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
-logger = logging.getLogger("arca")
+logger = logging.getLogger("quasarzone")
 
-_ID_RE = re.compile(r"/b/hotdeal/(\d+)")
-_ROW_SELECTOR = "a.vrow.column"
+_ID_RE = re.compile(r"/qb_saleinfo/views/(\d+)")
 
 
-class ArcaSource(CfHtmlSource):
-    slug = "arca"
-    name = "아카라이브"
-    list_url = "https://arca.live/b/hotdeal"
-    base_url = "https://arca.live"
+class QuasarzoneSource(CfHtmlSource):
+    slug = "quasarzone"
+    name = "퀘이사존"
+    list_url = "https://quasarzone.com/bbs/qb_saleinfo"
+    base_url = "https://quasarzone.com"
 
     def parse(self, soup: BeautifulSoup) -> list[RawDeal]:
         deals: list[RawDeal] = []
-        for row in soup.select(_ROW_SELECTOR):
+        for row in soup.select("div.market-info-list-cont"):
             try:
                 deal = self._parse_row(row)
                 if deal:
@@ -35,17 +34,23 @@ class ArcaSource(CfHtmlSource):
         return deals
 
     def _parse_row(self, row) -> RawDeal | None:
-        href = row.get("href", "")
+        a = row.select_one("a.subject-link")
+        if not a:
+            a = row.select_one("a[href*='/qb_saleinfo/views/']")
+        if not a:
+            return None
+
+        href = a.get("href", "")
         m = _ID_RE.search(href)
         if not m:
             return None
 
-        title_el = row.select_one(".title")
-        title = (title_el.get_text(strip=True) if title_el else row.get_text(strip=True)).strip()
+        title_el = a.select_one(".ellipsis-with-reply-cnt") or a
+        title = title_el.get_text(strip=True)
         if not title:
             return None
 
-        price_el = row.select_one(".deal-price")
+        price_el = row.select_one(".text-orange")
         price = parse_price(price_el.get_text(strip=True)) if price_el else parse_price(title)
 
         return RawDeal(
