@@ -15,9 +15,6 @@ class Settings(BaseSettings):
     ingest_interval_seconds: int = 600
     http_user_agent: str = "hotdeals-bot/0.1 (personal hotdeal aggregator)"
 
-    # 이미지 프록시 디스크 캐시 위치(볼륨). 한 번 받은 썸네일은 우리 서버에서 서빙.
-    img_cache_dir: str = "/cache"
-
     # CORS 허용 출처(쉼표 구분). 운영에선 실제 도메인으로. 개발 기본값은 로컬 Next.
     web_origin: str = "http://localhost:3000"
 
