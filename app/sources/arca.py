@@ -14,7 +14,6 @@ from app.sources.cf_source import CfHtmlSource
 logger = logging.getLogger("arca")
 
 _ID_RE = re.compile(r"/b/hotdeal/(\d+)")
-_ROW_SELECTOR = "a.vrow.column"
 
 
 class ArcaSource(CfHtmlSource):
@@ -25,33 +24,35 @@ class ArcaSource(CfHtmlSource):
 
     def parse(self, soup: BeautifulSoup) -> list[RawDeal]:
         deals: list[RawDeal] = []
-        for row in soup.select(_ROW_SELECTOR):
-            try:
-                deal = self._parse_row(row)
-                if deal:
-                    deals.append(deal)
-            except Exception as exc:
-                logger.debug("행 파싱 실패: %s", exc)
+        seen: set[str] = set()
+        for a in soup.select("a.title.hybrid-title"):
+            href = a.get("href", "")
+            m = _ID_RE.search(href)
+            if not m:
+                continue
+            sn = m.group(1)
+            if sn in seen:
+                continue
+            title = a.get_text(strip=True)
+            if not title:
+                continue
+            # 댓글 수 표시 "[N]" 제거
+            title = re.sub(r"\[\d+\]$", "", title).strip()
+            if not title:
+                continue
+            seen.add(sn)
+
+            # 같은 행(vrow)에서 가격 추출 시도
+            row = a.find_parent("div", class_="vrow")
+            price = parse_price(title)
+
+            deals.append(
+                RawDeal(
+                    source_post_id=sn,
+                    title=title,
+                    url=self.absolute(f"/b/hotdeal/{sn}"),
+                    price=price,
+                    category=guess_category(title),
+                )
+            )
         return deals
-
-    def _parse_row(self, row) -> RawDeal | None:
-        href = row.get("href", "")
-        m = _ID_RE.search(href)
-        if not m:
-            return None
-
-        title_el = row.select_one(".title")
-        title = (title_el.get_text(strip=True) if title_el else row.get_text(strip=True)).strip()
-        if not title:
-            return None
-
-        price_el = row.select_one(".deal-price")
-        price = parse_price(price_el.get_text(strip=True)) if price_el else parse_price(title)
-
-        return RawDeal(
-            source_post_id=m.group(1),
-            title=title,
-            url=self.absolute(href),
-            price=price,
-            category=guess_category(title),
-        )

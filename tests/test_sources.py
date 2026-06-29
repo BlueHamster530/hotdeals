@@ -46,17 +46,19 @@ def test_clien_parse_handles_empty_html():
 # --- 개드립 ---
 
 _DOGDRIP_HTML = """
-<a class="title" href="/hotdeal/301234">[쿠팡] 신라면 멀티팩 5개입 (3,900원/무배)</a>
-<a class="title" href="/hotdeal/301235">[11번가] 삼성 SSD 1TB 109,000원</a>
-<a class="other" href="/hotdeal/999">광고글</a>
+<div class="board-list">
+  <a href="/hotdeal/710301234?sort_index=date&page=1">[쿠팡] 신라면 멀티팩 5개입 (3,900원/무배)</a>
+  <a href="/hotdeal/710301235?sort_index=date&page=1">[11번가] 삼성 SSD 1TB 109,000원</a>
+  <a href="/hotdeal/category/123">카테고리</a>
+</div>
 """
 
 
 def test_dogdrip_parse():
     deals = DogdripSource().parse(BeautifulSoup(_DOGDRIP_HTML, "lxml"))
     ids = {d.source_post_id for d in deals}
-    assert ids == {"301234", "301235"}
-    ramen = next(d for d in deals if d.source_post_id == "301234")
+    assert ids == {"710301234", "710301235"}
+    ramen = next(d for d in deals if d.source_post_id == "710301234")
     assert "신라면" in ramen.title
     assert ramen.price == 3900
 
@@ -64,16 +66,11 @@ def test_dogdrip_parse():
 # --- 아카라이브 ---
 
 _ARCA_HTML = """
-<a class="vrow column" href="/b/hotdeal/501234">
-  <span class="title">[쿠팡] 코카콜라 제로 30캔 (15,900원)</span>
-  <span class="deal-price">15,900원</span>
-</a>
-<a class="vrow column" href="/b/hotdeal/501235">
-  <span class="title">[G마켓] LG 모니터 27인치</span>
-</a>
-<a class="vrow column" href="/b/notice/1">
-  <span class="title">공지사항</span>
-</a>
+<div class="list-table">
+  <a class="title hybrid-title" href="/b/hotdeal/501234?p=1">[쿠팡] 코카콜라 제로 30캔 (15,900원)[3]</a>
+  <a class="title hybrid-title" href="/b/hotdeal/501235?p=1">[G마켓] LG 모니터 27인치</a>
+  <a class="title hybrid-title" href="/b/notice/1?p=1">공지사항</a>
+</div>
 """
 
 
@@ -83,6 +80,7 @@ def test_arca_parse():
     assert ids == {"501234", "501235"}
     cola = next(d for d in deals if d.source_post_id == "501234")
     assert cola.price == 15900
+    assert "[3]" not in cola.title
 
 
 # --- 퀘이사존 ---
