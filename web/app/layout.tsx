@@ -17,7 +17,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/" style={{ textDecoration: "none" }}>핫딜 모아보기</Link>
             </h1>
             <nav style={{ display: "flex", gap: 8 }}>
-              <Link href="/chat">AI 챗봇</Link>
               <Link href="/settings">알림 설정</Link>
             </nav>
           </header>

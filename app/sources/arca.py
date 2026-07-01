@@ -7,14 +7,14 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
 logger = logging.getLogger("arca")
 
 _ID_RE = re.compile(r"/b/hotdeal/(\d+)")
-_ROW_SELECTOR = "a.vrow.column"
+_CAT_RE = re.compile(r"category=(\w+)")
 
 
 class ArcaSource(CfHtmlSource):
@@ -25,33 +25,67 @@ class ArcaSource(CfHtmlSource):
 
     def parse(self, soup: BeautifulSoup) -> list[RawDeal]:
         deals: list[RawDeal] = []
-        for row in soup.select(_ROW_SELECTOR):
+        seen: set[str] = set()
+        for row in soup.select("div.vrow.hybrid"):
+            cls = " ".join(row.get("class", []))
+            if "notice" in cls or "head" in cls:
+                continue
             try:
-                deal = self._parse_row(row)
+                deal = self._parse_row(row, seen)
                 if deal:
                     deals.append(deal)
             except Exception as exc:
                 logger.debug("행 파싱 실패: %s", exc)
         return deals
 
-    def _parse_row(self, row) -> RawDeal | None:
-        href = row.get("href", "")
+    def _parse_row(self, row, seen: set[str]) -> RawDeal | None:
+        a = row.select_one("a.title.hybrid-title")
+        if not a:
+            return None
+        href = a.get("href", "")
         m = _ID_RE.search(href)
         if not m:
             return None
-
-        title_el = row.select_one(".title")
-        title = (title_el.get_text(strip=True) if title_el else row.get_text(strip=True)).strip()
-        if not title:
+        sn = m.group(1)
+        if sn in seen:
             return None
 
+        # 제목: 아이콘/댓글수 span 제거 후 텍스트만
+        a_copy = BeautifulSoup(str(a), "lxml").find("a")
+        for junk in a_copy.select(".media-icon, .info, .comment-count"):
+            junk.decompose()
+        title = a_copy.get_text(strip=True)
+        if not title:
+            return None
+        seen.add(sn)
+
+        # 가격: .deal-price ("13,470원")
         price_el = row.select_one(".deal-price")
         price = parse_price(price_el.get_text(strip=True)) if price_el else parse_price(title)
 
+        # 썸네일: .vrow-preview img (namu.la CDN, protocol-relative)
+        thumb = None
+        img = row.select_one(".vrow-preview img")
+        if img and img.get("src"):
+            thumb = self.absolute(img["src"])
+
+        # 쇼핑몰명을 제목 앞에 붙여 가독성↑ (예: "G마켓 · 신라면...")
+        store_el = row.select_one(".deal-store")
+        store = store_el.get_text(strip=True) if store_el else ""
+        display_title = f"[{store}] {title}" if store else title
+
+        # 아카 자체 카테고리 배지(category=food 등)를 우리 분류로 매핑
+        badge = row.select_one(".badges a.badge")
+        cat_key = None
+        if badge:
+            mm = _CAT_RE.search(badge.get("href", ""))
+            cat_key = mm.group(1) if mm else None
+
         return RawDeal(
-            source_post_id=m.group(1),
-            title=title,
-            url=self.absolute(href),
+            source_post_id=sn,
+            title=display_title,
+            url=self.absolute(f"/b/hotdeal/{sn}"),
             price=price,
-            category=guess_category(title),
+            category=resolve_category(self.slug, cat_key, title),
+            thumbnail_url=thumb,
         )

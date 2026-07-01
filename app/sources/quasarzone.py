@@ -7,7 +7,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
@@ -53,10 +53,21 @@ class QuasarzoneSource(CfHtmlSource):
         price_el = row.select_one(".text-orange")
         price = parse_price(price_el.get_text(strip=True)) if price_el else parse_price(title)
 
+        thumb = None
+        img = row.select_one("img")
+        if img:
+            src = img.get("src") or img.get("data-original")
+            if src and "img" in src:
+                thumb = self.absolute(src)
+
+        cat_el = row.select_one(".category")
+        cat = cat_el.get_text(strip=True) if cat_el else None
+
         return RawDeal(
             source_post_id=m.group(1),
             title=title,
             url=self.absolute(href),
             price=price,
-            category=guess_category(title),
+            category=resolve_category(self.slug, cat, title),
+            thumbnail_url=thumb,
         )

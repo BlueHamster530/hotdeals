@@ -38,6 +38,15 @@ async def test_chat_disabled_without_key(api):
     assert r.status_code == 503
 
 
+async def test_img_proxy_ssrf_guard(api):
+    # allowlist에 없는 호스트/내부 메타데이터/비-http는 거부 (SSRF·남용 방지)
+    client, _, _ = api
+    assert (await client.get("/api/img", params={"u": "https://evil.com/a.jpg"})).status_code == 400
+    assert (await client.get("/api/img", params={"u": "http://169.254.169.254/latest/meta-data/"})).status_code == 400
+    assert (await client.get("/api/img", params={"u": "ftp://clien.net/a.jpg"})).status_code == 400
+    assert (await client.get("/api/img")).status_code == 422  # u 누락
+
+
 async def test_alarm_requires_auth(api):
     client, _, _ = api
     assert (await client.get("/api/alarm/keywords")).status_code == 401

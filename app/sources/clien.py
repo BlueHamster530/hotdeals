@@ -39,7 +39,13 @@ class ClienSource(HtmlSource):
                 best[sn] = (title, href, row)
 
         deals: list[RawDeal] = []
-        for sn, (title, href, _row) in best.items():
+        for sn, (title, href, row) in best.items():
+            thumb = None
+            if row is not None:
+                img = row.select_one("img")
+                if img:
+                    src = img.get("src") or img.get("data-src")
+                    thumb = self.absolute(src) if src else None
             deals.append(
                 RawDeal(
                     source_post_id=sn,
@@ -47,6 +53,7 @@ class ClienSource(HtmlSource):
                     url=self.absolute(href),
                     price=parse_price(title),
                     category=guess_category(title),
+                    thumbnail_url=thumb,
                 )
             )
         return deals

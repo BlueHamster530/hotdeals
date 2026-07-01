@@ -157,7 +157,8 @@ async def _execute_tool(name: str, args: dict, session) -> str:
 
 
 def is_enabled() -> bool:
-    return bool(get_settings().gemini_api_key)
+    settings = get_settings()
+    return settings.chatbot_enabled and bool(settings.gemini_api_key)
 
 
 async def run_agent(history: list[dict]) -> str:

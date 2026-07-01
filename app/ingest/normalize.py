@@ -61,6 +61,18 @@ def parse_price(title: str) -> int | None:
     return max(candidates) if candidates else None
 
 
+# 가격이 없어도 예외적으로 수집하는 딜(네이버페이 포인트 적립 등 무료성 정보).
+_PRICE_EXEMPT = ("네이버페이", "네이버 페이", "naverpay")
+
+
+def should_collect(title: str, price: int | None) -> bool:
+    """수집 여부. 가격이 있으면 수집. 없으면(0원/무가격) 예외 키워드가 있을 때만 수집."""
+    if price is not None and price > 0:
+        return True
+    low = title.lower()
+    return any(k in low for k in _PRICE_EXEMPT)
+
+
 # 브랜드명(콜라 등)이 들어가도 실제론 잡화/굿즈인 경우. 음료·식품 오분류 방지용.
 _NON_CONSUMABLE = (
     "수납", "스토리지", "폴딩", "캠핑", "텀블러", "보틀", "굿즈", "키링", "인형",
@@ -77,6 +89,50 @@ def guess_category(title: str) -> str | None:
         if any(kw in low for kw in keywords):
             return category
     return None
+
+
+# 소스 자체 카테고리 → 우리 분류. 고신뢰 항목만 매핑하고, 복합/모호한 값
+# (예: '생활/식품')은 두지 않아 제목 키워드 규칙이 더 정확히 판단하게 한다.
+_SOURCE_CATEGORY_MAP: dict[str, dict[str, str]] = {
+    "arca": {                     # badge href의 category= 키(영문, 안정적)
+        "food": "식품",
+        "living": "생활용품",
+        "elec": "전자기기",
+        "pc": "전자기기",
+        "sw": "도서/콘텐츠",
+        "game": "도서/콘텐츠",
+        "fashion": "패션",
+        "beauty": "뷰티",
+        "gift": "상품권/쿠폰",
+        "coupon": "상품권/쿠폰",
+    },
+    "quasarzone": {               # .category 한글 텍스트
+        "PC/하드웨어": "전자기기",
+        "노트북/모바일": "전자기기",
+        "가전/TV": "가전",
+        "게임/SW": "도서/콘텐츠",
+        "패션/의류": "패션",
+        "포인트/래플": "상품권/쿠폰",
+    },
+    "fmkorea": {                  # .category 한글 텍스트
+        "가전제품": "가전",
+        "디지털/컴퓨터": "전자기기",
+        "패션/잡화": "패션",
+        "화장품/미용": "뷰티",
+        "도서/음반": "도서/콘텐츠",
+        "게임": "도서/콘텐츠",
+        "상품권/쿠폰": "상품권/쿠폰",
+    },
+}
+
+
+def resolve_category(slug: str, source_cat: str | None, title: str) -> str | None:
+    """소스 자체 카테고리를 우선 매핑(고신뢰), 없거나 매핑 불가면 제목 키워드 규칙으로 폴백."""
+    if source_cat:
+        mapped = _SOURCE_CATEGORY_MAP.get(slug, {}).get(source_cat.strip())
+        if mapped:
+            return mapped
+    return guess_category(title)
 
 
 def normalized_key(title: str) -> str:
