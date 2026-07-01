@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     ingest_interval_seconds: int = 600
     http_user_agent: str = "hotdeals-bot/0.1 (personal hotdeal aggregator)"
 
+    # 이미지 프록시 디스크 캐시 위치(볼륨). 한 번 받은 썸네일은 우리 서버에서 서빙.
+    img_cache_dir: str = "/cache"
+
     # CORS 허용 출처(쉼표 구분). 운영에선 실제 도메인으로. 개발 기본값은 로컬 Next.
     web_origin: str = "http://localhost:3000"
 
@@ -30,6 +33,8 @@ class Settings(BaseSettings):
     # 무료 티어 키: https://aistudio.google.com/apikey
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash"
+    # 챗봇 전체 스위치. False면 키가 있어도 챗봇을 끈다(현재 품질 이슈로 비활성).
+    chatbot_enabled: bool = False
 
     @property
     def database_url(self) -> str:

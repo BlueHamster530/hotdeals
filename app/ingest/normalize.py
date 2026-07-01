@@ -61,6 +61,18 @@ def parse_price(title: str) -> int | None:
     return max(candidates) if candidates else None
 
 
+# 가격이 없어도 예외적으로 수집하는 딜(네이버페이 포인트 적립 등 무료성 정보).
+_PRICE_EXEMPT = ("네이버페이", "네이버 페이", "naverpay")
+
+
+def should_collect(title: str, price: int | None) -> bool:
+    """수집 여부. 가격이 있으면 수집. 없으면(0원/무가격) 예외 키워드가 있을 때만 수집."""
+    if price is not None and price > 0:
+        return True
+    low = title.lower()
+    return any(k in low for k in _PRICE_EXEMPT)
+
+
 # 브랜드명(콜라 등)이 들어가도 실제론 잡화/굿즈인 경우. 음료·식품 오분류 방지용.
 _NON_CONSUMABLE = (
     "수납", "스토리지", "폴딩", "캠핑", "텀블러", "보틀", "굿즈", "키링", "인형",

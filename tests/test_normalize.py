@@ -2,7 +2,22 @@
 
 import pytest
 
-from app.ingest.normalize import guess_category, normalized_key, parse_price
+from app.ingest.normalize import guess_category, normalized_key, parse_price, should_collect
+
+
+@pytest.mark.parametrize(
+    "title, price, expected",
+    [
+        ("[쿠팡] 신라면 5개입 (3,900원)", 3900, True),      # 가격 있음 → 수집
+        ("[네이버페이] 일일적립 43원", None, True),          # 무가격이지만 네이버페이 예외
+        ("네이버 페이 클릭적립", None, True),                # 띄어쓴 변형도 예외
+        ("오늘의집 이번주 핫딜 선공개", None, False),        # 무가격 → 제외
+        ("무료 사은품 증정 이벤트", None, False),            # 무가격 → 제외
+        ("KT 알뜰폰 0원 요금제", 0, False),                  # 0원 → 제외
+    ],
+)
+def test_should_collect(title, price, expected):
+    assert should_collect(title, price) is expected
 
 
 @pytest.mark.parametrize(

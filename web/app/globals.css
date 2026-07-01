@@ -70,11 +70,19 @@ a { color: inherit; }
 /* 딜 카드 */
 .deal-list { display: flex; flex-direction: column; gap: 12px; }
 .deal-card {
-  padding: 16px;
+  display: flex; gap: 14px; padding: 16px;
   background: var(--surface); border: 1px solid var(--border-2);
   border-radius: var(--radius);
 }
-.deal-body { min-width: 0; }
+.thumb {
+  flex-shrink: 0; width: 88px; height: 88px; border-radius: var(--radius-sm);
+  object-fit: cover; background: var(--surface-2);
+}
+.thumb-empty {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); font-size: 11px; color: var(--text-3);
+}
+.deal-body { flex: 1; min-width: 0; }
 
 .deal-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .deal-source { font-size: 12px; color: var(--text-2); }

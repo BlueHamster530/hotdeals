@@ -53,10 +53,18 @@ class QuasarzoneSource(CfHtmlSource):
         price_el = row.select_one(".text-orange")
         price = parse_price(price_el.get_text(strip=True)) if price_el else parse_price(title)
 
+        thumb = None
+        img = row.select_one("img")
+        if img:
+            src = img.get("src") or img.get("data-original")
+            if src and "img" in src:
+                thumb = self.absolute(src)
+
         return RawDeal(
             source_post_id=m.group(1),
             title=title,
             url=self.absolute(href),
             price=price,
             category=guess_category(title),
+            thumbnail_url=thumb,
         )

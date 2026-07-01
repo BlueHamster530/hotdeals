@@ -50,8 +50,7 @@ export default function ChatPage() {
       <main>
         <h2 style={{ fontSize: 18, fontWeight: 600 }}>AI 챗봇</h2>
         <p style={{ color: "var(--text-2)" }}>
-          챗봇이 비활성화되어 있습니다. 백엔드 <code>.env</code>에 <code>GEMINI_API_KEY</code>를
-          설정하면 활성화됩니다. (무료 키: aistudio.google.com/apikey)
+          현재 AI 챗봇 기능은 비활성화되어 있습니다.
         </p>
       </main>
     );

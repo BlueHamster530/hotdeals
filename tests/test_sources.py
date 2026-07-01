@@ -66,10 +66,26 @@ def test_dogdrip_parse():
 # --- 아카라이브 ---
 
 _ARCA_HTML = """
-<div class="list-table">
-  <a class="title hybrid-title" href="/b/hotdeal/501234?p=1">[쿠팡] 코카콜라 제로 30캔 (15,900원)[3]</a>
-  <a class="title hybrid-title" href="/b/hotdeal/501235?p=1">[G마켓] LG 모니터 27인치</a>
-  <a class="title hybrid-title" href="/b/notice/1?p=1">공지사항</a>
+<div class="vrow hybrid">
+  <div class="vrow-inner">
+    <div class="vrow-top deal">
+      <span class="vcol col-title">
+        <span class="badges"><span class="deal-store">G마켓</span></span>
+        <a class="title hybrid-title" href="/b/hotdeal/501234?p=1">
+          <span class="media-icon"></span>신라면 5입+너구리 5입<span class="info"><span class="comment-count">[3]</span></span>
+        </a>
+      </span>
+    </div>
+    <a class="title hybrid-bottom" href="/b/hotdeal/501234?p=1">
+      <div class="vrow-bottom deal"><span class="deal-price">13,470원</span></div>
+    </a>
+  </div>
+  <a class="title preview-image" href="/b/hotdeal/501234?p=1">
+    <div class="vrow-preview"><img src="//ac-p.namu.la/x.png"/></div>
+  </a>
+</div>
+<div class="vrow hybrid notice">
+  <div class="vrow-inner"><a class="title hybrid-title" href="/b/hotdeal/2?p=1">공지</a></div>
 </div>
 """
 
@@ -77,16 +93,20 @@ _ARCA_HTML = """
 def test_arca_parse():
     deals = ArcaSource().parse(BeautifulSoup(_ARCA_HTML, "lxml"))
     ids = {d.source_post_id for d in deals}
-    assert ids == {"501234", "501235"}
-    cola = next(d for d in deals if d.source_post_id == "501234")
-    assert cola.price == 15900
-    assert "[3]" not in cola.title
+    assert ids == {"501234"}  # 공지 제외
+    d = deals[0]
+    assert d.price == 13470
+    assert "[3]" not in d.title
+    assert "신라면" in d.title
+    assert "G마켓" in d.title
+    assert d.thumbnail_url == "https://ac-p.namu.la/x.png"
 
 
 # --- 퀘이사존 ---
 
 _QZ_HTML = """
 <div class="market-info-list-cont">
+  <img src="https://img2.quasarzone.com/store/abc.png"/>
   <a class="subject-link" href="/bbs/qb_saleinfo/views/601234">
     <span class="ellipsis-with-reply-cnt">[쿠팡] 삼성 980 PRO SSD (109,000원)</span>
   </a>
@@ -105,16 +125,35 @@ def test_quasarzone_parse():
     assert len(deals) == 2
     ssd = next(d for d in deals if d.source_post_id == "601234")
     assert ssd.price == 109000
+    assert ssd.thumbnail_url == "https://img2.quasarzone.com/store/abc.png"
 
 
 # --- 펨코 ---
 
 _FM_HTML = """
-<li class="li_best2_pop0">
-  <h3 class="title"><a href="/912345678">[쿠팡] 에어팟 프로 2 (249,000원)</a></h3>
+<li class="li li_best2_pop0">
+  <div class="li">
+    <a href="/912345678"><img class="thumb" src="//image.fmkorea.com/lazy/transparent.gif"
+       data-original="//image.fmkorea.com/thumb/912345678_70x50.webp"/></a>
+    <h3 class="title"><a class="hotdeal_var8" href="/912345678">
+      <span class="ellipsis-target">에어팟 프로 2</span><span class="comment_count">[5]</span>
+    </a></h3>
+    <div class="hotdeal_info">
+      <span>쇼핑몰: <a class="strong" href="#">쿠팡</a></span> /
+      <span>가격: <a class="strong" href="#">249,000원</a></span> /
+      <span>배송: <a class="strong" href="#">무료</a></span>
+    </div>
+  </div>
 </li>
-<li class="li_best2_pop1">
-  <h3 class="title"><a href="/912345679">펩시 제로 24캔 12,900원</a></h3>
+<li class="li li_best2_pop1">
+  <div class="li">
+    <h3 class="title"><a class="hotdeal_var8" href="/912345679">
+      <span class="ellipsis-target">펩시 제로 24캔</span>
+    </a></h3>
+    <div class="hotdeal_info">
+      <span>가격: <a class="strong" href="#">12,900원</a></span>
+    </div>
+  </div>
 </li>
 """
 
@@ -124,6 +163,10 @@ def test_fmkorea_parse():
     assert len(deals) == 2
     airpod = next(d for d in deals if d.source_post_id == "912345678")
     assert airpod.price == 249000
+    assert "에어팟" in airpod.title
+    assert "[5]" not in airpod.title
+    assert "쿠팡" in airpod.title
+    assert airpod.thumbnail_url == "https://image.fmkorea.com/thumb/912345678_70x50.webp"
 
 
 def test_all_parsers_handle_empty():

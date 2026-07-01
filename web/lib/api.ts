@@ -28,6 +28,7 @@ export interface Deal {
   price: number | null;
   category: string | null;
   source: string;
+  thumbnail_url: string | null;
   posted_at: string | null;
   fetched_at: string | null;
   item_id: number | null;
@@ -82,6 +83,11 @@ export async function fetchCategories(): Promise<string[]> {
 export function formatKRW(value: number | null): string {
   if (value == null) return "-";
   return value.toLocaleString("ko-KR") + "원";
+}
+
+// 썸네일은 이미지 프록시를 통해 로드(핫링크 차단 우회 + 혼합콘텐츠 방지)
+export function proxiedImage(src: string): string {
+  return `${API_BASE}/api/img?u=${encodeURIComponent(src)}`;
 }
 
 // --- 알림: 초대제 + 텔레그램 연결 + 토큰 인증 (요구사항 3·10) ---

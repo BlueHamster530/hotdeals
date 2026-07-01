@@ -1,7 +1,20 @@
 "use client";
 
-import { Deal, formatKRW, relativeTime } from "@/lib/api";
+import { useState } from "react";
+import { Deal, formatKRW, proxiedImage, relativeTime } from "@/lib/api";
 import { PriceGauge, RATING_COLOR, VERDICT_STYLE } from "./PriceGauge";
+
+// 썸네일: 있으면 프록시 경유로 표시, 없거나 로딩 실패하면 빈 슬롯
+function Thumb({ src }: { src: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return <div className="thumb thumb-empty">이미지 없음</div>;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="thumb" src={proxiedImage(src)} alt="" loading="lazy" onError={() => setBroken(true)} />
+  );
+}
 
 function discountLabel(pct: number | null) {
   if (pct == null) return null;
@@ -18,6 +31,7 @@ export function DealCard({ deal }: { deal: Deal }) {
 
   return (
     <article className="deal-card">
+      <Thumb src={deal.thumbnail_url} />
       <div className="deal-body">
         <div className="deal-meta">
           <span className="deal-source">
