@@ -91,6 +91,50 @@ def guess_category(title: str) -> str | None:
     return None
 
 
+# 소스 자체 카테고리 → 우리 분류. 고신뢰 항목만 매핑하고, 복합/모호한 값
+# (예: '생활/식품')은 두지 않아 제목 키워드 규칙이 더 정확히 판단하게 한다.
+_SOURCE_CATEGORY_MAP: dict[str, dict[str, str]] = {
+    "arca": {                     # badge href의 category= 키(영문, 안정적)
+        "food": "식품",
+        "living": "생활용품",
+        "elec": "전자기기",
+        "pc": "전자기기",
+        "sw": "도서/콘텐츠",
+        "game": "도서/콘텐츠",
+        "fashion": "패션",
+        "beauty": "뷰티",
+        "gift": "상품권/쿠폰",
+        "coupon": "상품권/쿠폰",
+    },
+    "quasarzone": {               # .category 한글 텍스트
+        "PC/하드웨어": "전자기기",
+        "노트북/모바일": "전자기기",
+        "가전/TV": "가전",
+        "게임/SW": "도서/콘텐츠",
+        "패션/의류": "패션",
+        "포인트/래플": "상품권/쿠폰",
+    },
+    "fmkorea": {                  # .category 한글 텍스트
+        "가전제품": "가전",
+        "디지털/컴퓨터": "전자기기",
+        "패션/잡화": "패션",
+        "화장품/미용": "뷰티",
+        "도서/음반": "도서/콘텐츠",
+        "게임": "도서/콘텐츠",
+        "상품권/쿠폰": "상품권/쿠폰",
+    },
+}
+
+
+def resolve_category(slug: str, source_cat: str | None, title: str) -> str | None:
+    """소스 자체 카테고리를 우선 매핑(고신뢰), 없거나 매핑 불가면 제목 키워드 규칙으로 폴백."""
+    if source_cat:
+        mapped = _SOURCE_CATEGORY_MAP.get(slug, {}).get(source_cat.strip())
+        if mapped:
+            return mapped
+    return guess_category(title)
+
+
 def normalized_key(title: str) -> str:
     """같은 상품을 묶기 위한 매칭 키. 쇼핑몰 태그·괄호·가격·기호 제거 후 소문자화.
 

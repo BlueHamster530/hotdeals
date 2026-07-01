@@ -70,9 +70,9 @@ _ARCA_HTML = """
   <div class="vrow-inner">
     <div class="vrow-top deal">
       <span class="vcol col-title">
-        <span class="badges"><span class="deal-store">G마켓</span></span>
+        <span class="badges"><span class="deal-store">G마켓</span><a class="badge" href="/b/hotdeal?category=food">식품</a></span>
         <a class="title hybrid-title" href="/b/hotdeal/501234?p=1">
-          <span class="media-icon"></span>신라면 5입+너구리 5입<span class="info"><span class="comment-count">[3]</span></span>
+          <span class="media-icon"></span>브랜드X 정체불명 상품<span class="info"><span class="comment-count">[3]</span></span>
         </a>
       </span>
     </div>
@@ -97,9 +97,10 @@ def test_arca_parse():
     d = deals[0]
     assert d.price == 13470
     assert "[3]" not in d.title
-    assert "신라면" in d.title
     assert "G마켓" in d.title
     assert d.thumbnail_url == "https://ac-p.namu.la/x.png"
+    # 제목만으론 못 잡는 상품이지만 아카 카테고리 배지(food)로 분류됨
+    assert d.category == "식품"
 
 
 # --- 퀘이사존 ---

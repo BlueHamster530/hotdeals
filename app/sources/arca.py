@@ -7,13 +7,14 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
 logger = logging.getLogger("arca")
 
 _ID_RE = re.compile(r"/b/hotdeal/(\d+)")
+_CAT_RE = re.compile(r"category=(\w+)")
 
 
 class ArcaSource(CfHtmlSource):
@@ -73,11 +74,18 @@ class ArcaSource(CfHtmlSource):
         store = store_el.get_text(strip=True) if store_el else ""
         display_title = f"[{store}] {title}" if store else title
 
+        # 아카 자체 카테고리 배지(category=food 등)를 우리 분류로 매핑
+        badge = row.select_one(".badges a.badge")
+        cat_key = None
+        if badge:
+            mm = _CAT_RE.search(badge.get("href", ""))
+            cat_key = mm.group(1) if mm else None
+
         return RawDeal(
             source_post_id=sn,
             title=display_title,
             url=self.absolute(f"/b/hotdeal/{sn}"),
             price=price,
-            category=guess_category(title),
+            category=resolve_category(self.slug, cat_key, title),
             thumbnail_url=thumb,
         )

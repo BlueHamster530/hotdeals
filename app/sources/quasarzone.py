@@ -7,7 +7,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
@@ -60,11 +60,14 @@ class QuasarzoneSource(CfHtmlSource):
             if src and "img" in src:
                 thumb = self.absolute(src)
 
+        cat_el = row.select_one(".category")
+        cat = cat_el.get_text(strip=True) if cat_el else None
+
         return RawDeal(
             source_post_id=m.group(1),
             title=title,
             url=self.absolute(href),
             price=price,
-            category=guess_category(title),
+            category=resolve_category(self.slug, cat, title),
             thumbnail_url=thumb,
         )

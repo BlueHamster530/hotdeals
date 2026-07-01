@@ -7,7 +7,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal
 from app.sources.cf_source import CfHtmlSource
 
@@ -73,11 +73,14 @@ class FmkoreaSource(CfHtmlSource):
 
         display_title = f"[{store}] {title}" if store else title
 
+        cat_el = li.select_one(".category a") or li.select_one("span.category")
+        cat = cat_el.get_text(strip=True) if cat_el else None
+
         return RawDeal(
             source_post_id=sn,
             title=display_title,
             url=self.absolute(f"/{sn}"),
             price=price,
-            category=guess_category(title),
+            category=resolve_category(self.slug, cat, title),
             thumbnail_url=thumb,
         )

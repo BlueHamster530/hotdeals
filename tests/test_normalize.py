@@ -2,7 +2,33 @@
 
 import pytest
 
-from app.ingest.normalize import guess_category, normalized_key, parse_price, should_collect
+from app.ingest.normalize import (
+    guess_category,
+    normalized_key,
+    parse_price,
+    resolve_category,
+    should_collect,
+)
+
+
+@pytest.mark.parametrize(
+    "slug, source_cat, title, expected",
+    [
+        # 소스 카테고리가 고신뢰로 매핑됨 (제목 키워드보다 우선)
+        ("arca", "food", "정체불명 신상품", "식품"),
+        ("arca", "elec", "무설명 기기", "전자기기"),
+        ("quasarzone", "가전/TV", "브랜드X 신모델", "가전"),
+        ("fmkorea", "가전제품", "무설명", "가전"),
+        # 매핑에 없는 모호한 카테고리는 제목 키워드로 폴백
+        ("quasarzone", "생활/식품", "종근당 비타민D 영양제", "건강"),
+        # 소스 카테고리가 없으면 제목 키워드로
+        ("arca", None, "코카콜라 제로 30캔", "제로음료"),
+        # 소스 카테고리도 없고 키워드도 못 잡으면 None
+        ("ppomppu", None, "무설명 일반 상품", None),
+    ],
+)
+def test_resolve_category(slug, source_cat, title, expected):
+    assert resolve_category(slug, source_cat, title) == expected
 
 
 @pytest.mark.parametrize(
