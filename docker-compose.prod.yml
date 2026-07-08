@@ -85,6 +85,10 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certbot/www:/var/www/certbot:ro
       - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      # needcomputer 프로젝트(별도 저장소, ~/needcomputer)의 정적 프론트 빌드 결과물.
+      # /checkcomputer 서브패스로 얹기 위함(default.conf 참고). API는 needcomputer-api
+      # 컨테이너가 hotdeals_default 네트워크를 공유해서 리버스 프록시로 연결.
+      - ../needcomputer/web/dist:/var/www/checkcomputer:ro
     depends_on:
       - api
       - web
