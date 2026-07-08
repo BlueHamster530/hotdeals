@@ -51,17 +51,19 @@ services:
       db:
         condition: service_healthy
 
-  bot:
-    build: .
-    image: hotdeals-backend:local
-    restart: unless-stopped
-    env_file: .env.prod
-    environment:
-      POSTGRES_HOST: db
-    command: ["python", "-m", "app.cli", "bot"]
-    depends_on:
-      db:
-        condition: service_healthy
+  # bot:
+  #   텔레그램 봇 — 나중에 도입 예정(부가 기능, 우선순위 낮음). TELEGRAM_BOT_TOKEN 없이 계속
+  #   재시작 루프에 빠지는 문제로 주석 처리. 재도입 시 이 블록 해제 + .env.prod 토큰 채우기.
+  #   build: .
+  #   image: hotdeals-backend:local
+  #   restart: unless-stopped
+  #   env_file: .env.prod
+  #   environment:
+  #     POSTGRES_HOST: db
+  #   command: ["python", "-m", "app.cli", "bot"]
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
   web:
     build:
