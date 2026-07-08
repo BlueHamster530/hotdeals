@@ -68,6 +68,6 @@ class QuasarzoneSource(CfHtmlSource):
             title=title,
             url=self.absolute(href),
             price=price,
-            category=resolve_category(self.slug, cat, title),
+            category=resolve_category(self.slug, cat),
             thumbnail_url=thumb,
         )

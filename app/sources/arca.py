@@ -86,6 +86,6 @@ class ArcaSource(CfHtmlSource):
             title=display_title,
             url=self.absolute(f"/b/hotdeal/{sn}"),
             price=price,
-            category=resolve_category(self.slug, cat_key, title),
+            category=resolve_category(self.slug, cat_key),
             thumbnail_url=thumb,
         )

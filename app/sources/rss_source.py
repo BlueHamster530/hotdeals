@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 import feedparser
 import httpx
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price
 from app.sources.base import RawDeal, Source
 
 _NUM_RE = re.compile(r"(\d+)")
@@ -78,7 +78,7 @@ class RssSource(Source):
                     title=title,
                     url=entry.get("link", ""),
                     price=parse_price(title),
-                    category=guess_category(title),
+                    category=None,  # AI 분류가 수집 후 일괄 처리(app/ai/classify.py)
                     thumbnail_url=self.extract_thumbnail(entry),
                     posted_at=posted_at,
                 )

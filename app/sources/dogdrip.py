@@ -6,7 +6,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from app.ingest.normalize import guess_category, parse_price
+from app.ingest.normalize import parse_price
 from app.sources.base import BROWSER_HEADERS, RawDeal
 from app.sources.html_source import HtmlSource
 
@@ -41,7 +41,7 @@ class DogdripSource(HtmlSource):
                     title=title,
                     url=self.absolute(f"/hotdeal/{sn}"),
                     price=parse_price(title),
-                    category=guess_category(title),
+                    category=None,  # AI 분류가 수집 후 일괄 처리(app/ai/classify.py)
                 )
             )
         return deals

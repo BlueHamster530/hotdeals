@@ -12,23 +12,23 @@ from app.ingest.normalize import (
 
 
 @pytest.mark.parametrize(
-    "slug, source_cat, title, expected",
+    "slug, source_cat, expected",
     [
-        # 소스 카테고리가 고신뢰로 매핑됨 (제목 키워드보다 우선)
-        ("arca", "food", "정체불명 신상품", "식품"),
-        ("arca", "elec", "무설명 기기", "전자기기"),
-        ("quasarzone", "가전/TV", "브랜드X 신모델", "가전"),
-        ("fmkorea", "가전제품", "무설명", "가전"),
-        # 매핑에 없는 모호한 카테고리는 제목 키워드로 폴백
-        ("quasarzone", "생활/식품", "종근당 비타민D 영양제", "건강"),
-        # 소스 카테고리가 없으면 제목 키워드로
-        ("arca", None, "코카콜라 제로 30캔", "제로음료"),
-        # 소스 카테고리도 없고 키워드도 못 잡으면 None
-        ("ppomppu", None, "무설명 일반 상품", None),
+        # 소스 카테고리가 고신뢰로 매핑됨
+        ("arca", "food", "식품"),
+        ("arca", "elec", "전자기기"),
+        ("arca", "game", "게임"),
+        ("quasarzone", "가전/TV", "가전"),
+        ("fmkorea", "가전제품", "가전"),
+        # 매핑에 없는 카테고리·소스 카테고리 없음 → None (제목 키워드 추측은 여기서 안 함,
+        # AI 분류가 수집 후 일괄 처리)
+        ("quasarzone", "생활/식품", None),
+        ("arca", None, None),
+        ("ppomppu", None, None),
     ],
 )
-def test_resolve_category(slug, source_cat, title, expected):
-    assert resolve_category(slug, source_cat, title) == expected
+def test_resolve_category(slug, source_cat, expected):
+    assert resolve_category(slug, source_cat) == expected
 
 
 @pytest.mark.parametrize(
@@ -72,7 +72,9 @@ def test_parse_price_picks_largest_when_no_bracket():
     [
         ("코카콜라 제로 30캔", "제로음료"),
         ("삼성 980 PRO SSD", "전자기기"),
-        ("KT 알뜰폰 유심 요금제", "통신"),
+        ("KT 알뜰폰 유심 요금제", "요금제"),
+        ("SK텔레콤 5G 다이렉트요금제", "요금제"),
+        ("스팀 겨울 세일 인기 게임 번들", "게임"),
         ("스타벅스 원두 1kg", "커피/차"),
         ("LG 트롬 세탁기", "가전"),
         ("아이오페 에센스 세트", "뷰티"),
