@@ -10,8 +10,8 @@
 ## 0. 준비물 체크
 - [x] AWS Lightsail 계정 (보유)
 - [x] 텔레그램 봇 토큰 (보유) — 봇 사용자명도 확인(@BotFather → 봇 설정)
-- [ ] 도메인 (새로 구매 예정 — 3단계)
-- [ ] Anthropic API 키 (선택 — 없으면 AI 챗봇만 비활성, 나중에 추가 가능)
+- [x] 도메인 — DuckDNS 무료 서브도메인 `bhhotdeals.duckdns.org` (3단계)
+- [ ] Gemini API 키 (선택 — 없으면 AI 챗봇/AI분류만 비활성, 나중에 추가 가능)
 
 ---
 
@@ -37,10 +37,15 @@ git clone <레포주소> hotdeals && cd hotdeals
 ```
 
 ## 3. 도메인 구매 + DNS 연결
-1. 도메인 등록기관에서 구매(가비아·후이즈·Cloudflare·Namecheap 등). `.com` 기준 연 1~2만원대.
-2. DNS에 **A 레코드** 추가: `@` 와 `www` → **Lightsail 고정 IP**
-   - Cloudflare를 쓰면 프록시(주황 구름)는 처음엔 끄고(DNS only) certbot 발급 후 켜는 걸 권장
-3. `dig +short your-domain.com` 로 IP가 보이면 전파 완료(수 분~수 시간)
+
+**이 프로젝트는 DuckDNS 무료 서브도메인(`bhhotdeals.duckdns.org`) 사용.** (일반 도메인 구매시 아래 대안 참고)
+
+1. [duckdns.org](https://www.duckdns.org) 로그인(GitHub/Google 등) → 서브도메인 생성(`bhhotdeals`) → **Lightsail 고정 IP**로 지정
+2. Lightsail IP가 고정이므로 한 번만 설정하면 끝(동적 IP라면 duck.sh 갱신 스크립트를 cron에 등록 필요)
+3. `nslookup bhhotdeals.duckdns.org` 로 IP가 보이면 전파 완료(수 분 이내)
+4. DuckDNS는 `www` 서브도메인을 별도 지원하지 않으므로 `bhhotdeals.duckdns.org` 단일 도메인만 사용
+
+> 일반 도메인(가비아·후이즈·Cloudflare·Namecheap 등)을 구매한 경우: DNS에 **A 레코드** `@`와 `www` → Lightsail 고정 IP로 추가하고, `dig +short your-domain.com`으로 확인.
 
 ## 4. 환경변수 설정
 ```bash
@@ -61,47 +66,53 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pyth
 - `http://<고정IP>` 또는 `http://your-domain.com` 접속 확인
 - 로그: `docker compose -f docker-compose.prod.yml logs -f api worker`
 
-## 6. HTTPS 전환 (Let's Encrypt)
-도메인 A레코드가 서버를 가리키는지 확인 후:
+## 6. HTTPS 전환 (Let's Encrypt) — 완료 (2026-07-08, bhhotdeals.duckdns.org)
+
+도메인이 서버를 가리키는지 확인 후, **기존에 이미 떠 있는 HTTP nginx**(80서버가 `/.well-known/acme-challenge/`를
+서빙 중이므로 nginx 설정 변경 없이) 바로 인증서를 받는다:
 ```bash
 mkdir -p nginx/certbot/www nginx/certbot/conf
-# 인증서 발급 (도메인/이메일 교체)
 docker run --rm \
   -v $(pwd)/nginx/certbot/conf:/etc/letsencrypt \
   -v $(pwd)/nginx/certbot/www:/var/www/certbot \
   certbot/certbot certonly --webroot -w /var/www/certbot \
-  -d your-domain.com -d www.your-domain.com \
+  -d bhhotdeals.duckdns.org \
   --email you@example.com --agree-tos --no-eff-email
 ```
-발급 성공하면 `nginx/conf.d/default.conf` 의 `server { listen 80; ... }` **아래에** 다음 블록을 추가하고,
-기존 80 서버의 `location /api/`·`location /`·`location /healthz` 는 **HTTPS로 리다이렉트**하도록 바꾼다:
+발급 성공 후 `nginx/conf.d/default.conf`를 80(챌린지+리다이렉트)/443(실제 서빙) 두 서버로 교체한다.
+Docker DNS resolver(127.0.0.11) + 변수 `proxy_pass` 스타일을 그대로 유지(업스트림 IP 캐싱 방지, 4단계 참고):
 
 ```nginx
-# 80 서버: 인증 챌린지만 남기고 나머지는 443으로 리다이렉트
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name bhhotdeals.duckdns.org;
     location /.well-known/acme-challenge/ { root /var/www/certbot; }
     location / { return 301 https://$host$request_uri; }
 }
 
 server {
     listen 443 ssl;
-    server_name your-domain.com www.your-domain.com;
+    server_name bhhotdeals.duckdns.org;
+    resolver 127.0.0.11 valid=30s ipv6=off;
 
-    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/bhhotdeals.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bhhotdeals.duckdns.org/privkey.pem;
 
     location /api/ {
-        proxy_pass http://hotdeals_api;
+        set $api http://api:8000;
+        proxy_pass $api;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    location /healthz { proxy_pass http://hotdeals_api; }
+    location = /healthz {
+        set $api_health http://api:8000;
+        proxy_pass $api_health;
+    }
     location / {
-        proxy_pass http://hotdeals_web;
+        set $web http://web:3000;
+        proxy_pass $web;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -109,13 +120,14 @@ server {
     }
 }
 ```
-그리고 `docker-compose.prod.yml` 의 nginx 인증서 마운트를 `:ro` 로 이미 걸어뒀으니 nginx만 재시작:
+`docker-compose.prod.yml`의 nginx 443 포트/인증서 마운트는 이미 구성되어 있으므로(`:ro`) nginx만 재시작:
 ```bash
+git pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx
 ```
-`.env.prod` 의 `WEB_ORIGIN` 을 `https://your-domain.com` 으로 두고 `api` 재시작.
+`.env.prod`의 `WEB_ORIGIN`을 `https://bhhotdeals.duckdns.org`로 바꾸고 `api` 재시작.
 
-**자동 갱신**(인증서 90일): crontab에 등록
+**자동 갱신**(인증서 90일, DuckDNS는 www 서브도메인 없음): crontab에 등록 완료
 ```bash
 0 3 * * * cd ~/hotdeals && docker run --rm -v $(pwd)/nginx/certbot/conf:/etc/letsencrypt -v $(pwd)/nginx/certbot/www:/var/www/certbot certbot/certbot renew --quiet && docker compose -f docker-compose.prod.yml restart nginx
 ```
