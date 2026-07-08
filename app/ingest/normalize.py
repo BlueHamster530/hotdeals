@@ -19,8 +19,9 @@ _BRACKETS_RE = re.compile(r"[\(\[][^\)\]]*[\)\]]")
 # 매칭키 정리: 한글/영문/숫자만 남김
 _NON_KEY_RE = re.compile(r"[^0-9a-z가-힣]")
 
-# 카테고리 키워드 사전 (요구사항 2). 이 사전이 주 분류기(무료, 즉시)이고, 여기서 못 잡는
-# 애매한 제목/신상품만 AI 분류(app/ai/classify.py)가 폴백 처리한다.
+# 카테고리 키워드 사전 (요구사항 2). 유일한 분류기(app/ingest/classify.py가 이걸로 백필).
+# 여기서 못 잡는 품종명/신상품 등은 미분류(None)로 남는다(AI 분류는 무료 티어 일일 한도가
+# 너무 낮아 2026-07-08에 걷어냄).
 # 순서 = 매칭 우선순위(앞이 먼저 매칭).
 _CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("제로음료", ("제로", "콜라", "사이다", "탄산", "음료", "펩시")),
@@ -134,7 +135,7 @@ _SOURCE_CATEGORY_MAP: dict[str, dict[str, str]] = {
 
 def resolve_category(slug: str, source_cat: str | None) -> str | None:
     """소스 자체 카테고리(고신뢰)만 매핑. 없거나 매핑 불가면 None → 수집 후
-    app/ai/classify.py가 제목 키워드(→ 필요시 AI)로 일괄 분류한다."""
+    app/ingest/classify.py가 제목 키워드로 일괄 분류한다."""
     if not source_cat:
         return None
     return _SOURCE_CATEGORY_MAP.get(slug, {}).get(source_cat.strip())

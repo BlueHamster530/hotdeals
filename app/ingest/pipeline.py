@@ -158,14 +158,14 @@ async def run_once() -> dict[str, int]:
                 src.slug, len(source_new), len(kept), len(raw_deals),
             )
 
-    # 미분류 신규 딜 AI 분류 (Gemini 키 없으면 내부에서 no-op)
+    # 미분류 신규 딜 카테고리 분류 (규칙 기반)
     if new_deal_ids:
         try:
-            from app.ai.classify import classify_new
+            from app.ingest.classify import classify_new
 
             await classify_new(new_deal_ids)
         except Exception:
-            logger.exception("AI 분류 오류")
+            logger.exception("분류 오류")
 
     # 신규 딜에 대해 텔레그램 알림 매칭 (토큰 없으면 내부에서 no-op)
     if new_deal_ids:

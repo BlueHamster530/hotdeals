@@ -49,10 +49,10 @@ async def loop() -> None:
 
 
 async def classify_backfill() -> None:
-    from app.ai.classify import classify_all
+    from app.ingest.classify import classify_all
 
     n = await classify_all()
-    logger.info("AI 분류 백필 완료: %d건", n)
+    logger.info("분류 백필 완료: %d건", n)
 
 
 async def mint_invite(label: str | None) -> None:

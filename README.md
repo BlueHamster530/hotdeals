@@ -112,10 +112,12 @@ uvicorn app.api.main:app --reload # POST /api/chat, GET /api/chat/status
 웹 `/chat`에서 사용. 키 미설정이면 자동 비활성(나머지 정상).
 
 ### 자동 카테고리 분류 (요구사항 2)
-하이브리드: **규칙(키워드 사전, 무료) 우선 → 못 잡은 건 Gemini가 고정 분류체계로 폴백**.
-- 수집 시 신규 딜 자동 분류(`pipeline` → `classify_new`).
-- 기존 딜 백필: `python -m app.cli classify` (규칙 재적용 + AI).
-- 키 없으면 규칙만 동작('새청무'처럼 품종명은 미분류로 남고, 키 넣으면 식품 등으로 분류).
+**규칙(키워드 사전, 무료)만으로 분류**(`app/ingest/classify.py`). AI(Gemini) 분류도 시도했지만
+무료 티어 일일 요청 한도(20건)가 수집량을 감당하지 못해 걷어냈다(2026-07-08).
+- 같은 상품(Item) 재게시는 캐시로 재사용, 신규 딜은 수집 시 자동 분류(`pipeline` → `classify_new`).
+- 기존 딜 백필: `python -m app.cli classify`.
+- 규칙 사전에 없는 품종명/신상품('새청무'처럼)은 미분류로 남는다 — 키워드 사전(`app/ingest/normalize.py`
+  의 `_CATEGORY_KEYWORDS`)을 보강하면 다음 백필 때 소급 적용됨.
 
 ## 다음 단계 (로드맵)
 

@@ -52,7 +52,7 @@ class ClienSource(HtmlSource):
                     title=title,
                     url=self.absolute(href),
                     price=parse_price(title),
-                    category=None,  # 수집 후 일괄 분류(app/ai/classify.py: 규칙→AI 폴백)
+                    category=None,  # 수집 후 일괄 분류(app/ingest/classify.py)
                     thumbnail_url=thumb,
                 )
             )
