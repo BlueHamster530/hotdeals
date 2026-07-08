@@ -20,9 +20,15 @@ from app.ingest.normalize import (
         ("arca", "game", "게임"),
         ("quasarzone", "가전/TV", "가전"),
         ("fmkorea", "가전제품", "가전"),
+        # 루리웹 RSS <category>(글쓴이가 직접 지정, 라이브 확인됨)
+        ("ruliweb", "상품권", "상품권/쿠폰"),
+        ("ruliweb", "음식", "식품"),
+        ("ruliweb", "게임S/W", "게임"),
+        ("ruliweb", "게임H/W", "게임"),
         # 매핑에 없는 카테고리·소스 카테고리 없음 → None (제목 키워드 추측은 여기서 안 함,
-        # AI 분류가 수집 후 일괄 처리)
+        # 수집 후 app/ingest/classify.py가 일괄 처리)
         ("quasarzone", "생활/식품", None),
+        ("ruliweb", "취미용품", None),
         ("arca", None, None),
         ("ppomppu", None, None),
     ],

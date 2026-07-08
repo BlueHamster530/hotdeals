@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 import feedparser
 import httpx
 
-from app.ingest.normalize import parse_price
+from app.ingest.normalize import parse_price, resolve_category
 from app.sources.base import RawDeal, Source
 
 _NUM_RE = re.compile(r"(\d+)")
@@ -78,7 +78,9 @@ class RssSource(Source):
                     title=title,
                     url=entry.get("link", ""),
                     price=parse_price(title),
-                    category=None,  # 수집 후 일괄 분류(app/ingest/classify.py)
+                    # RSS 자체에 <category>가 있는 소스(예: 루리웹)는 우선 사용, 없으면
+                    # None → 수집 후 일괄 분류(app/ingest/classify.py)가 제목으로 처리
+                    category=resolve_category(self.slug, entry.get("category")),
                     thumbnail_url=self.extract_thumbnail(entry),
                     posted_at=posted_at,
                 )

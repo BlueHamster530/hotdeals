@@ -1,5 +1,6 @@
 """소스 파서 — 글번호 추출, HTML 구조 파싱(구조 변경 회귀 방지)."""
 
+import httpx
 from bs4 import BeautifulSoup
 
 from app.sources.arca import ArcaSource
@@ -8,11 +9,38 @@ from app.sources.dogdrip import DogdripSource
 from app.sources.fmkorea import FmkoreaSource
 from app.sources.ppomppu import PpomppuSource
 from app.sources.quasarzone import QuasarzoneSource
+from app.sources.ruliweb import RuliwebSource
 
 
 def test_extract_post_id_ruliweb_style():
     src = PpomppuSource()
     assert src.extract_post_id({"link": "https://bbs.ruliweb.com/market/board/1020/read/105126"}) == "105126"
+
+
+_RULIWEB_RSS = """<?xml version="1.0" encoding="UTF-8"?><rss version='2.0'>
+<channel><title>루리웹</title>
+<item>
+<title>[다이렉트게임즈] 페르소나 5 더 로열 -76% (16,800원)</title>
+<description></description>
+<category>게임S/W</category>
+<author>스톤드래곤</author>
+<link>https://bbs.ruliweb.com/market/board/1020/read/105452</link>
+<pubDate>Wed, 08 Jul 2026 09:48:56 +0900</pubDate>
+</item>
+</channel></rss>"""
+
+
+async def test_ruliweb_fetch_uses_rss_category():
+    # 루리웹 RSS는 글쓴이가 지정한 <category>가 있음(라이브 확인됨) → 제목 키워드보다 우선 사용
+    def handler(request):
+        return httpx.Response(200, content=_RULIWEB_RSS.encode())
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        deals = await RuliwebSource().fetch(client)
+
+    assert len(deals) == 1
+    assert deals[0].category == "게임"
 
 
 _CLIEN_HTML = """
