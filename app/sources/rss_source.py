@@ -78,7 +78,7 @@ class RssSource(Source):
                     title=title,
                     url=entry.get("link", ""),
                     price=parse_price(title),
-                    category=None,  # AI 분류가 수집 후 일괄 처리(app/ai/classify.py)
+                    category=None,  # 수집 후 일괄 분류(app/ai/classify.py: 규칙→AI 폴백)
                     thumbnail_url=self.extract_thumbnail(entry),
                     posted_at=posted_at,
                 )

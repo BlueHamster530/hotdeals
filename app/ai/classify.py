@@ -1,9 +1,10 @@
 """AI 카테고리 분류 (요구사항 2·4) — Gemini.
 
-**AI(Gemini)가 주 분류기**, 규칙(normalize.guess_category)은 AI 비활성(키 없음)이거나
-API 호출 자체가 실패했을 때만 쓰는 저비용 폴백/캐시다. 순서를 반대로(규칙 먼저) 하면
-"초파리제로"가 '제로' 키워드만 보고 제로음료로 오분류되는 식의 얕은 substring 매칭
-오류가 AI 검증 없이 그대로 저장되는 문제가 있어 AI를 먼저 돌린다.
+**규칙(normalize.guess_category)이 주 분류기**(무료, 즉시), AI는 규칙이 못 잡은
+애매한 제목만 보조로 분류한다. 한때 AI를 먼저 돌리는 구조도 시도했지만, 이 프로젝트가
+쓰는 Gemini 무료 키의 실제 한도가 **일일 20 요청**이라 수집량을 감당 못 해 되돌렸다
+(2026-07-08). "초파리제로"처럼 substring이 겹쳐 오분류되는 케이스는
+normalize._NON_CONSUMABLE류 제외 키워드로 규칙 단에서 직접 막는다.
 """
 
 from __future__ import annotations
@@ -89,10 +90,13 @@ async def _cached_item_category(session, deal: Deal) -> str | None:
     return item.category if item and item.category else None
 
 
-async def _classify_and_update(session, deals: list[Deal]) -> int:
-    """아이템 캐시(무료) → AI(정확도) → AI 비활성/실패 시에만 키워드 규칙으로 폴백."""
+async def _classify_and_update(session, deals: list[Deal]) -> tuple[int, bool]:
+    """아이템 캐시(무료) → 키워드 규칙(무료) → 그래도 못 잡은 것만 AI(유료/한도 있음).
+
+    반환: (분류된 건수, AI를 실제로 호출했는지). 후자는 백필 페이싱에 쓴다.
+    """
     if not deals:
-        return 0
+        return 0, False
     updated = 0
 
     need_ai: list[Deal] = []
@@ -101,24 +105,30 @@ async def _classify_and_update(session, deals: list[Deal]) -> int:
         if cached:
             await _set_category(session, d, cached)
             updated += 1
+            continue
+        c = guess_category(d.title)
+        if c:
+            await _set_category(session, d, c)
+            updated += 1
         else:
             need_ai.append(d)
 
+    ai_called = False
     if need_ai:
+        ai_called = is_enabled()
         cats = await classify_titles([d.title for d in need_ai])
-        if cats is None:
-            cats = [guess_category(d.title) for d in need_ai]
-        for d, c in zip(need_ai, cats):
-            if c:
-                await _set_category(session, d, c)
-                updated += 1
+        if cats:  # None(비활성/실패)이면 그대로 미분류로 남겨 다음 기회(한도 리셋 후)에 재시도
+            for d, c in zip(need_ai, cats):
+                if c:
+                    await _set_category(session, d, c)
+                    updated += 1
 
     await session.commit()
-    return updated
+    return updated, ai_called
 
 
 async def classify_new(deal_ids: list[int]) -> int:
-    """신규 수집 딜 중 미분류 처리(AI→규칙 폴백). 처리 건수 반환."""
+    """신규 수집 딜 중 미분류 처리(규칙→AI 폴백). 처리 건수 반환."""
     if not deal_ids:
         return 0
     async with SessionLocal() as session:
@@ -129,20 +139,21 @@ async def classify_new(deal_ids: list[int]) -> int:
         ).scalars().all()
         total = 0
         for i in range(0, len(deals), _BATCH):
-            total += await _classify_and_update(session, deals[i : i + _BATCH])
+            updated, _ = await _classify_and_update(session, deals[i : i + _BATCH])
+            total += updated
         if total:
             logger.info("분류 %d건", total)
         return total
 
 
-_BACKFILL_PACE_SECONDS = 4  # 배치 간 대기(무료 티어 RPM 한도 보호). 캐시로 채워진 배치는 스킵.
+_BACKFILL_PACE_SECONDS = 4  # AI를 실제로 호출한 배치 뒤에만 대기(무료 티어 일일 한도 보호).
 
 
 async def classify_all() -> int:
     """기존 미분류 딜 전체 백필(관리자 CLI). id 커서로 전진해 중복/무한루프 방지.
 
-    배치마다 AI를 호출할 수 있으므로(캐시 미스 시) 무료 티어 분당 요청 한도를 넘지 않도록
-    배치 사이마다 짧게 대기한다.
+    대부분은 규칙으로 무료 처리되고, 규칙이 못 잡은 것만 AI를 호출한다. AI 호출이
+    실제로 있었던 배치 뒤에만 짧게 대기해 무료 티어 한도 소모 속도를 늦춘다.
     """
     total = 0
     last_id = 0
@@ -159,8 +170,9 @@ async def classify_all() -> int:
             if not deals:
                 break
             last_id = deals[-1].id
-            total += await _classify_and_update(session, deals)
+            updated, ai_called = await _classify_and_update(session, deals)
+            total += updated
             logger.info("분류 진행: 누적 %d건 (cursor=%d)", total, last_id)
-            if is_enabled():
+            if ai_called:
                 await asyncio.sleep(_BACKFILL_PACE_SECONDS)
     return total

@@ -19,8 +19,8 @@ _BRACKETS_RE = re.compile(r"[\(\[][^\)\]]*[\)\]]")
 # 매칭키 정리: 한글/영문/숫자만 남김
 _NON_KEY_RE = re.compile(r"[^0-9a-z가-힣]")
 
-# 카테고리 키워드 사전. AI 분류(app/ai/classify.py)가 주 분류기이고, 이 사전은
-# ①소스 표기 카테고리가 없을 때 폴백 ②AI 비활성/실패 시 저비용 캐시 역할만 한다.
+# 카테고리 키워드 사전 (요구사항 2). 이 사전이 주 분류기(무료, 즉시)이고, 여기서 못 잡는
+# 애매한 제목/신상품만 AI 분류(app/ai/classify.py)가 폴백 처리한다.
 # 순서 = 매칭 우선순위(앞이 먼저 매칭).
 _CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("제로음료", ("제로", "콜라", "사이다", "탄산", "음료", "펩시")),
@@ -81,6 +81,8 @@ def should_collect(title: str, price: int | None) -> bool:
 _NON_CONSUMABLE = (
     "수납", "스토리지", "폴딩", "캠핑", "텀블러", "보틀", "굿즈", "키링", "인형",
     "우산", "슬리퍼", "담요", "매트", "쿠션", "파우치", "케이스", "에코백", "피규어",
+    # '초파리제로'처럼 '제로'가 들어가도 살충제 등 생활용품인 경우(실제 잡았던 버그)
+    "살충제", "에프킬라", "초파리", "모기", "바퀴벌레", "해충",
 )
 
 
@@ -131,8 +133,8 @@ _SOURCE_CATEGORY_MAP: dict[str, dict[str, str]] = {
 
 
 def resolve_category(slug: str, source_cat: str | None) -> str | None:
-    """소스 자체 카테고리(고신뢰)만 매핑. 없거나 매핑 불가면 None → AI 분류(app/ai/classify.py)가
-    수집 후 일괄 처리한다(제목만으로 하는 키워드 추측은 여기서 하지 않음)."""
+    """소스 자체 카테고리(고신뢰)만 매핑. 없거나 매핑 불가면 None → 수집 후
+    app/ai/classify.py가 제목 키워드(→ 필요시 AI)로 일괄 분류한다."""
     if not source_cat:
         return None
     return _SOURCE_CATEGORY_MAP.get(slug, {}).get(source_cat.strip())
